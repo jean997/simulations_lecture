@@ -385,6 +385,8 @@ result_tab2 <- setting2 %>% group_by(sample_size) %>%
     mutate(Setting = "Setting 2")
   
 result_tab <- bind_rows(result_tab1, result_tab2) 
+
+result_tab
 ```
 
 ---
@@ -663,12 +665,24 @@ summ %>% ggplot() +
 
 - Test as you go. 
 
+- Keep track of failures -- how often does a result return NA or fail in some other way?
+
+---
+# Simulation Coding Tips
+
 - There are some software packages that automate the "boring" part (the loop). 
 
-  - [DSC is my favorite](https://stephenslab.github.io/dsc-wiki/overview)
-  - Recommend only if you are already a little familiar with running simulations and willing to learn a new interface. 
-  - If you use simulations in your work outside this class, I highly recommend. 
-  - Automates lots of issues like submitting jobs to the cluster. 
-  - Makes it easy to add new analysis methods to existing simulations. 
-  - Makes it easy to keep track of what you did. 
+- [DSC is my favorite](https://stephenslab.github.io/dsc-wiki/overview)
+
+- For this class, I don't recommend using DSC unless
+  + You are already a little familiar with running simulations and 
+  + Willing to learn a new interface. 
+
+- If you use simulations in your work outside this class, I highly recommend. 
+
+- Automates lots of issues like submitting jobs to the cluster. 
+
+- Makes it easy to add new analysis methods to existing simulations. 
+
+- Makes it easy to keep track of what you did. 
   

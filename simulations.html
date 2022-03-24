@@ -457,6 +457,26 @@ result_tab2 &lt;- setting2 %&gt;% group_by(sample_size) %&gt;%
     mutate(Setting = "Setting 2")
   
 result_tab &lt;- bind_rows(result_tab1, result_tab2) 
+
+result_tab
+```
+
+```
+## # A tibble: 12 × 6
+##    sample_size  avg_bias coverage  sd_t nmiss Setting  
+##          &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; &lt;chr&gt;    
+##  1          10  0.0036      0.968 1.08      0 Setting 1
+##  2          20  0.0066      0.946 1.02      0 Setting 1
+##  3          50  0.00094     0.951 1.02      0 Setting 1
+##  4         100 -0.00107     0.958 0.975     0 Setting 1
+##  5         500  0.00166     0.956 1.01      0 Setting 1
+##  6        1000 -0.000189    0.959 0.983     0 Setting 1
+##  7          10  0.436       0.662 2.66      0 Setting 2
+##  8          20 -0.118       0.794 2.18      0 Setting 2
+##  9          50  0.0968      0.843 1.63      0 Setting 2
+## 10         100  0.0536      0.9   1.28      0 Setting 2
+## 11         500  0.0113      0.934 1.10      0 Setting 2
+## 12        1000 -0.00148     0.945 1.02      0 Setting 2
 ```
 
 ---
@@ -761,14 +781,26 @@ summ %&gt;% ggplot() +
 
 - Test as you go. 
 
+- Keep track of failures -- how often does a result return NA or fail in some other way?
+
+---
+# Simulation Coding Tips
+
 - There are some software packages that automate the "boring" part (the loop). 
 
-  - [DSC is my favorite](https://stephenslab.github.io/dsc-wiki/overview)
-  - Recommend only if you are already a little familiar with running simulations and willing to learn a new interface. 
-  - If you use simulations in your work outside this class, I highly recommend. 
-  - Automates lots of issues like submitting jobs to the cluster. 
-  - Makes it easy to add new analysis methods to existing simulations. 
-  - Makes it easy to keep track of what you did. 
+- [DSC is my favorite](https://stephenslab.github.io/dsc-wiki/overview)
+
+- For this class, I don't recommend using DSC unless
+  + You are already a little familiar with running simulations and 
+  + Willing to learn a new interface. 
+
+- If you use simulations in your work outside this class, I highly recommend. 
+
+- Automates lots of issues like submitting jobs to the cluster. 
+
+- Makes it easy to add new analysis methods to existing simulations. 
+
+- Makes it easy to keep track of what you did. 
   
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
