@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Simulations</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Jean Morrison" />
+    <script src="libs/header-attrs-2.13/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/robot-fonts.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/robot.css" rel="stylesheet" />
+    <link href="libs/tile-view-0.2.6/tile-view.css" rel="stylesheet" />
+    <script src="libs/tile-view-0.2.6/tile-view.js"></script>
+    <script src="libs/mark.js-8.11.1/mark.min.js"></script>
+    <link href="libs/xaringanExtra-search-0.0.1/search.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-search-0.0.1/search.js"></script>
+    <script>window.addEventListener('load', function() { window.xeSearch = new RemarkSearch({"position":"bottom-left","caseSensitive":false,"showIcon":true,"autoSearch":true}) })</script>
+    <link href="libs/panelset-0.2.6/panelset.css" rel="stylesheet" />
+    <script src="libs/panelset-0.2.6/panelset.js"></script>
+    <link rel="stylesheet" href="scroll.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Simulations
+### Jean Morrison
+### March 24, 2022 (updated: 2022-03-24)
+
+---
+
+# Simulation
+
+- A **simulation** is a computational experiment. 
+  
+- The simulations we will talk about today are **Monte Carlo** simulations. 
+  + The term Monte Carlo is used for methods that repeatedly sample from a probability distribution. 
+  
+- Simulating is an incredibly powerful statistical technique with very broad application. 
+
+- Simulating is a strategy for estimating parameters that we cannot derive or approximate theoretically. 
+
+
+
+
+
+---
+
+# Use Cases
+
+- Estimating properties of estimators
+
+  + An estimator we want to use does not have known mean/variance/etc.
+  + We want to assess finite-sample performance. 
+  + We want to see what happens if assumptions are violated. 
+
+--
+
+- Estimating power or necessary sample size
+  + If we run this experiment, what are the chances that we can reject the null hypothesis?
+
+--
+
+- Comparing multiple estimation strategies
+  + Methods A, B, and C all estimate the same parameter. Which is best?
+
+--
+
+- As a research and learning tool
+  + Demonstrate a concept to yourself. 
+  + Quickly assess if new results are reasonable. 
+  + Test that software is working as expected.  
+
+---
+
+# Properties of Estimators
+
+- Most of our favorite estimators have known theoretical distributions. 
+
+- For example, the one-sample t-statistic 
+$$ t(X_1, \dots, X_N) = \frac{\bar{X}}{\hat{\sigma}/\sqrt{N}}$$
+is *exactly* t-distributed with mean `\(E[X_i]\)` and `\(N-1\)` degrees of freedom if `\(X_1, \dots, X_N\)` are independent, identically distributed (iid), normal random variables. 
+
+- This distribution is a good approximation as long as `\(X_1, \dots, X_n\)` are iid with finite mean and variance, and `\(N\)` is "not too small". 
+
+- We can use the theoretical t-distribution to produce confidence intervals and `\(p\)`-values testing that the mean is equal to 0. 
+
+---
+# Properties of Estimators
+
+- In some cases, we are interested in estimators with unknown distribution (nobody has derived it or it is very hard to write down). 
+
+- We might want to know the *finite-sample* properties of an estimator that has known asymptotic distribution. 
+  + What is the distribution of the t-test if `\(N\)` is small and the sample is not normal?
+  
++ We might want to know properties of the estimator when some of the assumptions used to derive a theoretical distribution are violated. 
+
+
+---
+# Example 1: Welch's t-statistic
+
+
+- Suppose we want to estimate the difference in means of two populations using samples  `\(\mathbf{X}_1 = (X_{1,1}, \dots, X_{N_1,1})\)` and `\(\mathbf{X}_2 = (X_{1, 2}, \dots, X_{N_2, 2})\)`. 
+  + True parameter `\(\mu = E[X_1]- E[X_2]\)`
+
+- One estimator is the difference in sample means `\(\hat{\mu} \equiv \bar{X}_1 - \bar{X}_2\)`
+
+- The Welch's two-sample t-statistic is `$$\hat{t} = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s^2_1}{N_1} + \frac{s^2_2}{N_2}}}$$`
+
+
+---
+# Example 1: Welch's t-statistic
+
+- The t-distribution with `\(N_1 + N_2 -2\)` degrees of freedom is a good approximation for the distribution of `\(\hat{t}\)` if the samples are normal or sample size is large and `\(\mu = 0\)`. 
+
+- We can use this result to get a confidence interval for `\(\hat{\mu}\)` as `\((\hat{L}, \hat{U})\)` where 
+  + `\(\hat{L} = \hat{\mu} - t_{\alpha/2}\sqrt{\frac{s^2_1}{N_1} + \frac{s^2_2}{N_2}}\)`
+  + `\(\hat{U} = \hat{\mu} + t_{1-\alpha/2}\sqrt{\frac{s^2_1}{N_1} + \frac{s^2_2}{N_2}}\)`
+
+- How worried should we be about non-normal data?
+
+- How many samples is "enough" for the t-distribution to be a "good" approximation?
+
+---
+# Example 1: Strategy
+
+1. Generate data computationally (e.g. in R) for two samples.
+  + This is a "synthetic" or "simulated" data set.
+  + Call it `\(D_j\)`. The `\(j\)` indexes the simulation number.
+
+2. Analyze the data and store the result.  
+  + Compute the difference in means, the t-statistics, and the confidence interval based on the t-distribution approximation.
+
+3. Evaluate the result
+  + Compute some measures of how we can estimate the difference in means. 
+  
++ Repeat steps 1,2, and 3 many times (for `\(j = 1, \dots, J\)`). 
+
++  Summarize the results. 
+
+---
+# Simulation Settings
+
+- We need to decide *how* to create our synthetic data set. 
+  + We said we wanted to know what happened when the data were non-normal. 
+  + But there are lots of ways to generate non-normal data. 
+  
+- We might want to compare a few different choices of simulation strategy. 
+  + Different distributions 
+  + Different sample sizes
+
+- These are called *simulation settings*. 
+  + There are an infinite number of possible settings so we will have to just choose a few that seem interesting. 
+  
+---
+# Example 1: Settings
+
++ Setting 1: 
+  + Sample 1 and Sample 2 are both drawn from a binomial distribution with mean 0.25.  
+  + The two samples have equal mean and equal variance but are not normal.
+
++ Setting 2: 
+  + Sample 1 is drawn from a negative binomial distribution with mean 10 and over-dispersion parameter 0.1. 
+  + Sample 2 is drawn from a negative binomial distribution with mean 10 and over-dispersion parameter 1. 
+  + Samples have equal mean but unequal variance and are not normal.
+  
+- In both settings, we will look at a range of sample sizes.
+
+  +  Consider `\(N_1 = N_2 = 10, 20, 50, 100, 500\)`, and 1000 observations. 
+
+---
+# Example 1: Analysis
+
+- Once we have a simulated data set, we need to apply our estimator to it. 
+
+- Compute `\(\hat{\mu}(D_j)  = \hat{\mu}_j\)`
+
+- Computing the t-statistic, `\(\hat{t}(D_j) = \hat{t}_j\)`.
+
+- Compute the usual t-test confidence interval `\((\hat{L}_j, \hat{U}_j)\)`. 
+
+---
+# Example 1: Evaluation
+
+- To get something concrete out of the experiments, we need to be able to quantify our questions: 
+
+  + "How worried should we be about non-normal data?"
+  + "How many samples is enough?"
+
+--
+
+- We can look to the properties that would make us "not worried". 
+
+  - We want `\(\hat{\mu}\)` to have expected value equal to `\(E[X_1] - E[X_2]\)`. 
+  - We want the 95% confidence interval based on the t-distribution to contain the true difference in means 95% of the time. 
+  - We want the `\(p\)`-value based on comparing `\(\hat{t}_j\)` to the t-distribution to be uniformly distributed if `\(\mu = 0\)` (won't look at today).
+
+---
+# Example 1: Evaluation
+
+- For each simulated data set we need some evaluation metrics that tell us how well the t-statistic is estimating the difference in means. 
+
+- Compute the bias `\(\hat{t}_j - \mu\)` where `\(\mu = E[X_1]-E[X_2]\)`. 
+  + In our settings `\(\mu\)` is always 0.
+  
+- Compute the coverage: 
+  + Is `\(L_j &lt; \mu &lt; U_j\)`?
+  
+- Could also compute the `\(p\)`-value `\(p_j\)`.
+
+---
+# Example 1: Simluation Code
+
+- I strongly recommend writing functions when you run simulations. 
+
+- The functions below generate data from Setting 1 and Setting 2. 
+
+- Notice that means and over-dispersion parameters are function parameters rather than being "hard-coded".
+  + This makes it easy to modify settings quickly.
+
+
+```r
+library(stats) # For NB distribution
+sim_setting1 &lt;- function(n1, n2, prob1 = 0.25, prob2 = 0.25){
+  x1 &lt;- rbinom(n = n1, size = 1, prob = prob1)
+  x2 &lt;- rbinom(n = n2, size = 1, prob = prob2)
+  return(list(x1 = x1, x2 = x2, mu = prob1-prob2))
+}
+
+sim_setting2 &lt;- function(n1, n2, mean1 = 10, mean2 = 10, od1 = 0.1, od2 = 1){
+  x1 &lt;- rnbinom(n = n1, mu = mean1, size = 1/od1)
+  x2 &lt;- rnbinom(n = n2, mu = mean2, size = 1/od2)
+  return(list(x1 = x1, x2 = x2, mu = mean1-mean2))
+}
+```
+
+---
+# Example 1: Analysis Code
+
+- The analysis part of this experiment is just a t-test
+
+
+```r
+my_t_test &lt;- function(D){
+  x &lt;- c(D$x1, D$x2)
+  grp &lt;- rep(c(0, 1), c(length(D$x1), length(D$x2)))
+  f &lt;- t.test(x ~ grp)
+  mu &lt;- as.numeric(f$estimate[1]) - as.numeric(f$estimate[2])
+  return(list(t = f$statistic, 
+              mu = mu,
+              L = f$conf.int[[1]], 
+              U = f$conf.int[[2]], 
+              p = f$p.value))
+}
+```
+
+
+---
+# Example 1: Evaluate Code
+
+- For each data set we have two evaluation metrics we want to compute: 
+
+- Bias `\(\hat{\mu}_j - 0\)` and coverage, `\(1_{L_j &lt; \mu &lt; U_j}\)`.
+
+- These are simple enough that we could have just added them into the `my_t_test` function. 
+
+- I am giving them their own functions in order to make a point later about the structure of simulation experiments. 
+
+
+
+```r
+bias &lt;- function(D, result){
+  result$mu-D$mu
+}
+
+covered &lt;- function(D, result){
+  result$L &lt; D$mu &amp; result$U &gt; D$mu
+}
+```
+
+---
+# Example 1: Test
+
+Make sure that all the code works as expected. 
+
+
+```r
+set.seed(123)
+Dtest &lt;- sim_setting1(n1=20, n2 = 20)
+
+rtest &lt;- my_t_test(Dtest)
+rtest
+```
+
+```
+## $t
+##         t 
+## 0.3295018 
+## 
+## $mu
+## [1] 0.05
+## 
+## $L
+## [1] -0.2572063
+## 
+## $U
+## [1] 0.3572063
+## 
+## $p
+## [1] 0.7435888
+```
+
+```r
+bias(Dtest, rtest)
+```
+
+```
+## [1] 0.05
+```
+
+```r
+covered(Dtest, rtest)
+```
+
+```
+## [1] TRUE
+```
+
+---
+# Example 1: Run Simulations
+
+- Often your simulations will be in a big `for` loop. 
+  + In R, functions like `map`, `lapply`, and `replicate1` are all useful. 
+  
+- Sometimes there will be layers of loops: 
+  - Outside loop: simulation parameters (sample size)
+  - Inside loop: simulation replicates
+  
+
+```r
+library(purrr)
+library(dplyr)
+library(ggplot2)
+```
+  
+
+```r
+set.seed(1) # Important!
+nsims &lt;- 1000
+sample_size &lt;- c(10, 20, 50, 100, 500, 1000)
+
+setting1 &lt;- map_dfr(sample_size, function(n){ 
+  # Sample size loop
+  X &lt;- map_dfr(seq(nsims), function(j){
+      # Replication loop
+      
+      # Simulate
+      D &lt;- sim_setting1(n1 = n, n2 = n, prob1 = 0.25, prob2 = 0.25)
+      # Analyse
+      result &lt;- my_t_test(D)
+      # Evaluate
+      b &lt;- bias(D, result)
+      c &lt;- covered(D, result)
+      # Return
+      data.frame(bias = b, covered = c, 
+           p = result$p, t = result$t, 
+           sample_size = n, j = j)
+    })
+  return(X)
+})
+
+setting2 &lt;- map_dfr(sample_size, function(n){ 
+  # Sample size loop
+  X &lt;- map_dfr(seq(nsims), function(j){
+      # Replication loop
+      
+      # Simulate
+      D &lt;- sim_setting2(n1 = n, n2 = n, 
+                        mean1 = 10, mean2 = 10, 
+                        od1 = 0.1, od2 = 10)
+      # Analyse
+      result &lt;- my_t_test(D)
+      # Evaluate
+      b &lt;- bias(D, result)
+      c &lt;- covered(D, result)
+      # Return
+      data.frame(bias = b, covered = c, 
+           p = result$p, t = result$t, 
+           sample_size = n, j = j)
+    })
+  return(X)
+})
+```
+
+---
+# Example 1: Run Simulations
+
+- The result of running the simulations is a big data frame with 6000 rows.
+
+
+
+```r
+dim(setting1)
+```
+
+```
+## [1] 6000    6
+```
+
+```r
+head(setting1)
+```
+
+```
+##       bias covered         p          t sample_size j
+## t...1  0.0    TRUE 1.0000000  0.0000000          10 1
+## t...2  0.0    TRUE 1.0000000  0.0000000          10 2
+## t...3  0.2    TRUE 0.2900334  1.0954451          10 3
+## t...4 -0.2    TRUE 0.3880961 -0.8846517          10 4
+## t...5 -0.3    TRUE 0.1381482 -1.5666989          10 5
+## t...6  0.1    TRUE 0.5565650  0.6000000          10 6
+```
+
+```r
+table(setting1$sample_size)
+```
+
+```
+## 
+##   10   20   50  100  500 1000 
+## 1000 1000 1000 1000 1000 1000
+```
+
+
+---
+# Example 1: Summarize
+
+- We have our experiment results, now we need to summarize them. 
+
+- Below I compute average bias, coverage rate, and the standard deviation of the t-statistics. 
+
+- The standard deviation of the `\(\hat{t}_j\)`'s is an estimate of the standard error of the t-statistic.
+  + Should be close to `\(\frac{N-2}{N-4}\)` where `\(N = N_1 + N_2\)`. 
+
+
+```r
+result_tab1 &lt;- setting1 %&gt;% group_by(sample_size) %&gt;%
+    summarize(avg_bias = mean(bias, na.rm=TRUE), 
+              coverage = mean(covered, na.rm=TRUE), 
+              sd_t = sd(t, na.rm=TRUE), 
+              nmiss = sum(is.na(bias))) %&gt;%
+    mutate(Setting = "Setting 1")
+
+result_tab2 &lt;- setting2 %&gt;% group_by(sample_size) %&gt;%
+    summarize(avg_bias = mean(bias, na.rm=TRUE), 
+              coverage = mean(covered, na.rm=TRUE), 
+              sd_t = sd(t, na.rm=TRUE), 
+              nmiss = sum(is.na(bias)))%&gt;%
+    mutate(Setting = "Setting 2")
+  
+result_tab &lt;- bind_rows(result_tab1, result_tab2) 
+```
+
+---
+# Example 1: Average Bias
+
+
+```r
+result_tab %&gt;% ggplot(aes(x = sample_size, y = avg_bias)) + 
+    geom_point(aes(color = Setting, shape = Setting), size = 5) + 
+    geom_line(aes(color = Setting, linetype = Setting, group = Setting), size = 1.5) +
+    geom_hline(yintercept = 0) + 
+    scale_x_log10() + 
+    xlab("Sample Size") + 
+    ylab("Average Bias") + 
+    theme_bw() + 
+    theme(axis.text = element_text(size = 16), 
+          legend.text = element_text(size =16), 
+          axis.title = element_text(size = 18), 
+          legend.title = element_text(size = 18))
+```
+
+&lt;img src="simulations_files/figure-html/unnamed-chunk-9-1.png" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Example 1: Coverage
+
+
+```r
+result_tab %&gt;% ggplot(aes(x = sample_size, y = coverage)) + 
+    geom_point(aes(color = Setting, shape = Setting), size = 5) + 
+    geom_line(aes(color = Setting, linetype = Setting, group = Setting), size = 1.5) +
+    geom_hline(yintercept = 0.95) + 
+    scale_x_log10() + 
+    xlab("Sample Size") + 
+    ylab("Average Coverage of 95% CI") + 
+    theme_bw() + 
+    theme(axis.text = element_text(size = 16), 
+          legend.text = element_text(size =16), 
+          axis.title = element_text(size = 18), 
+          legend.title = element_text(size = 18))
+```
+
+&lt;img src="simulations_files/figure-html/unnamed-chunk-10-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+# Example 1: Standard Error
+
+
+
+
+```r
+result_tab %&gt;% ggplot(aes(x = sample_size, y = sd_t)) + 
+    geom_point(aes(color = Setting, shape = Setting), size = 5) + 
+    geom_line(aes(color = Setting, linetype = Setting, group = Setting), size = 1.5) +
+    geom_line(aes(x = sample_size, y = (2*sample_size-2)/(2*sample_size -4)))+ 
+    scale_x_log10() + 
+    xlab("Sample Size") + 
+    ylab("SD of t-stats") + 
+    theme_bw() + 
+    theme(axis.text = element_text(size = 16), 
+          legend.text = element_text(size =16), 
+          axis.title = element_text(size = 18), 
+          legend.title = element_text(size = 18))
+```
+
+&lt;img src="simulations_files/figure-html/unnamed-chunk-11-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+# Example 1: Conclusions
+
+- The t-test is performing very well in the binomial data, even at small sample size. 
+  + The bias is low
+  + Coverage is close to expected.
+  + Slight over-coverage suggests that tests of the non-null could be a little bit conservative. 
+  
+- The t-test did not do well in small sample sizes in setting 2 where the distributions of Sample 1 and Sample 2 had very different variances. 
+  + Bias is large and coverage is low. 
+  + We estimate that the t-statistic will have a larger variance than predicted by the t-distribution approximation. 
+  + The t-test improves as sample size increases (as predicgted by the central limit theorem).
+  
+---
+# All Simulations Have the Same Components
+
+- Create data: A method for creating synthetic data with some known properties
+
+- Analyze: One or more methods to analyze the data (i.e. estimate a parameter)
+
+- Evaluate: One or more functions to compare the results from the analysis step with the truth from the create data step. 
+
+- Summarize: A way to summarize the evaluations of many simulated data sets. 
+
+
+
+---
+# Familiar Simulations
+
+- There are two types of simulation you may already be familiar with: permutation testing, and the bootstrap.
+
+- Both of these methods use a "non-parametric" simulation strategy. 
+
+- Both of these methods fall into the "estimating properties of estimators" category.
+
+- Use permutation testing to estimate the distribution of an estimator under the null. 
+
+- Use the bootstrap to estimate the distribution of an estimator in the true data generating distribution. 
+
+
+---
+# Permutation Testing
+
+- Suppose we have a data set `\(D_0\)` which consists of `\(N\)` observations `\((Y_1, X_1), \dots, (Y_N, X_N)\)`.
+
+- We are interested in testing the **null hypothesis that `\(Y\)` and `\(X\)` are independent**. 
+
+- We have a test statistc `\(\hat{T}(D)\)`. 
+  + For example, `\(\hat{T}\)` might be the correlation between `\(Y\)` and `\(X\)`. 
+  
+- In order to test the null hypothesis, we need to know the distribution of `\(\hat{T}\)` under the null. 
+
+- We might not have a good estimate of this distribution. 
+  + For example, in Setting 2 in the previous example, the t-distribution was a bad approximation. 
+  
+---
+# Permutation Testing
+
+- If we could simulate data under the null, we could estimate the behavior of `\(\hat{T}\)` under the null.
+
+- Permutations are a non-parametric way to do this. 
+
+- Start with the data we actually observed, `\((Y_1, X_1), \dots (Y_N, X_N)\)`. 
+
+- To simulate one new data set, sample a permutation `\(S_j\)` from the set of all permuations of `\(N\)` items. 
+
+- The new data set is `\(D_j = (Y_{S_j(1)}, X_1), \dots, (Y_{S_j(N)}, X_N)\)`. 
+  + We have sampled `\(Y\)` from the empirical distribution of `\(Y\)` found in our data. 
+  + Likewise for `\(X\)`.
+  + However, in our sampling scheme, `\(Y\)` and `\(X\)` are independent. 
+  
+---
+# Permutation Testing
+
+- For each simulated data set, `\(D_j\)`, we compute `\(\hat{T}(D_j) \equiv \hat{T}_j\)`.
+
+- After many simulations, we count how many of the `\(\hat{T}_j\)`'s are above or below `\(\hat{T}(D_0)\)`
+  
+---
+# Bootstrap
+
+- The bootstrap is conceptually similar to permutations except that the focus is on estimating the distribution of the test statistic in our actual data rather than under the null.
+  + If `\(\mathbb{P}\)` is the true data distribution and `\(\mathbb{P}_0\)` is the null data distribtuion, 
+  + Permutation testing estimate the distribution of `\(T(\mathbb{P}_0)\)`
+  + Bootstrapping estimates the distribution of `\(T(\mathbb{P})\)`
+  
+
+- We again want to sample from the empirical distribution of the data. 
+  + Except this time we don't want to change anything or break any dependencies between variables. 
+  
+---
+# Bootstrap
+
+- Suppose that `\(D_0\)` consists of `\(N\)` independent observations, `\(D_0 = \lbrace X_1, \dots, X_N \rbrace\)` 
+
+- In each simulation, we sample, `\(N\)` observations with replacement, placing equal probability on each observation. 
+
+- In each bootstrap sample, `\(D_j\)`, we compute `\(\hat{T}(D_j) \equiv \hat{T}_j\)`.
+
+- After many iterations, the empirical distribution of the `\(\hat{T}_j\)`'s will approximate the distribution of `\(T(\mathbb{P})\)`.
+
+  
+---
+# Estimatimg Power
+
+- A very common use of simulations is to estimate the chances of detecting a "significant" result in an experiment that hasn't been done yet. 
+
+- In order to estimate power we need to know:
+
+  + Approximately what the data will look like (will they be normal? binomial? something else?)
+  + What effect size the investigators think is reasonable
+  + What analysis strategy we are going to use the analyze the data when we get it. 
+  
+- With this information, we can go through the same simulation process we used previously:
+  + Create data
+  + Analyze
+  + Evaluate -- in this step our evaluation is often whether or not `\(p_j &lt; 0.05\)` (or some other threshold).
+  + Summarize: Over all the simulations, how many times was `\(p_j &lt; 0.05\)`?
+  
+---
+# Example 2: Power
+
+- We will use the difference in means example again for simplicity. 
+
+- Our investigators are going to collect data from two groups. 
+  + They tell us that they expect both samples to be about normal. 
+  + They expect sample 1 to have a variance of 1 and sample 2 to have a variance of 2. 
+  + They think the difference in means could be between 0.1 and 0.5
+  + How many samples do they need?
+  
+---
+# Example 2: Functions
+
+- The function below simulates data
+
+
+```r
+sim_normal &lt;- function(n1, n2, mean_diff= 0.1, sd1 = 1, sd2 = sqrt(2)){
+  x1 &lt;- rnorm(n = n1, mean = 0, sd = sd1)
+  x2 &lt;- rnorm(n = n2, mean = mean_diff, sd = sd2)
+  return(list(x1 = x1, x2 = x2, mu = mean_diff))
+}
+```
+
+- We can use the same `my_t_test` function we used previously to analyze. 
+
+- To evaluate, we need to know if the p-value is below a signficance threshold
+
+
+```r
+detected &lt;- function(result, thresh){
+  result$p &lt; thresh
+}
+```
+
+---
+# Example 2: Run
+
+- We now have two parameters that we might want to vary in the simulate step: 
+  + Sample size and effect size
+
+
+```r
+set.seed(1) # Important!
+nsims &lt;- 1000
+sample_size &lt;- c(10, 20, 50, 100, 200, 500)
+effect_size &lt;- c(0.1, 0.3, 0.5)
+
+settings &lt;- expand.grid(ss = sample_size, e = effect_size)
+
+
+normal_sims &lt;- map2_dfr(settings$ss, settings$e, function(n, e){ 
+  # Sample and effect size loop
+  X &lt;- map_dfr(seq(nsims), function(j){
+      # Replication loop
+      
+      # Simulate
+      D &lt;- sim_normal(n1 =n, n2 = n, mean_diff = e)
+      # Analyse
+      result &lt;- my_t_test(D)
+      # Evaluate
+      d &lt;- detected(result, 0.05)
+      # Return
+      data.frame(detected = d,
+           p = result$p, t = result$t, 
+           sample_size = n, effect_size = e, j = j)
+    })
+  return(X)
+})
+table(normal_sims$sample_size, normal_sims$effect_size)
+```
+
+```
+##      
+##        0.1  0.3  0.5
+##   10  1000 1000 1000
+##   20  1000 1000 1000
+##   50  1000 1000 1000
+##   100 1000 1000 1000
+##   200 1000 1000 1000
+##   500 1000 1000 1000
+```
+
+---
+# Example 2: Summarize
+
+
+```r
+summ &lt;- normal_sims %&gt;% group_by(sample_size, effect_size) %&gt;%
+    summarize(power = mean(detected)) %&gt;%
+    mutate("Effect Size" = as.factor(effect_size))
+
+summ %&gt;% ggplot() + 
+    geom_point(aes(x = sample_size, y = power, col = `Effect Size`, shape = `Effect Size`)) + 
+    geom_line(aes(x = sample_size, y = power, col = `Effect Size`)) + 
+    xlab("Sample Size") + 
+    ylab("Power") + 
+    theme_bw() + 
+    theme(axis.text = element_text(size = 16), 
+          legend.text = element_text(size =16), 
+          axis.title = element_text(size = 18), 
+          legend.title = element_text(size = 18))
+```
+
+&lt;img src="simulations_files/figure-html/unnamed-chunk-15-1.png" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Simulation Coding Tips
+
+- Use functions so your code is modular. 
+
+- Always set a seed so you can replicate your results. 
+
+- Test as you go. 
+
+- There are some software packages that automate the "boring" part (the loop). 
+
+  - [DSC is my favorite](https://stephenslab.github.io/dsc-wiki/overview)
+  - Recommend only if you are already a little familiar with running simulations and willing to learn a new interface. 
+  - If you use simulations in your work outside this class, I highly recommend. 
+  - Automates lots of issues like submitting jobs to the cluster. 
+  - Makes it easy to add new analysis methods to existing simulations. 
+  - Makes it easy to keep track of what you did. 
+  
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"scroll": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
